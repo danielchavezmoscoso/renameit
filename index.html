@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RenameIt — Evaluaciones CBA</title>
+<meta name="description" content="Divide, renombra y entrega las evaluaciones de tus estudiantes. Tus PDFs se procesan en tu propia computadora.">
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="drop-overlay">Suelta los PDFs aquí</div>
+
+<header class="header">
+  <img src="img/logo-on-navy.png" alt="CBA La Paz">
+  <div class="title">
+    <h1>RenameIt</h1>
+    <p>Divide, renombra y entrega las evaluaciones de tus estudiantes</p>
+  </div>
+  <nav>
+    <button class="nav-btn" data-view="split" aria-current="page" data-tip="Divide los PDFs en un archivo por estudiante y les pone nombre.">Dividir y renombrar</button>
+    <button class="nav-btn" data-view="classroom" data-tip="Publica cada PDF en Google Classroom, visible solo para su alumno.">Enviar a Classroom</button>
+    <button class="nav-btn" data-view="alerts" data-tip="Llena las alertas académicas a partir de las notas de las tarjetas.">Alertas académicas</button>
+    <button class="nav-btn" data-view="formats" data-tip="Enseña al programa a leer otros tipos de PDF.">Formatos de PDF</button>
+    <button class="nav-btn" data-view="help" data-tip="Cómo usar RenameIt.">Ayuda</button>
+  </nav>
+</header>
+
+<!-- ======================================================= DIVIDIR -->
+<section class="view active" id="view-split">
+  <div class="steps" id="split-steps"></div>
+  <main>
+    <div class="layout">
+      <div class="col">
+        <div class="card">
+          <h2>1. Elige los PDFs</h2>
+          <div class="drop" id="drop" tabindex="0" role="button">
+            <div class="icon"></div>
+            <strong>Arrastra aquí tus PDFs</strong>
+            <span class="hint">o haz clic para elegirlos</span>
+          </div>
+          <div id="files-box" hidden>
+            <div class="table-wrap" style="max-height:150px">
+              <table><thead><tr><th>Archivo</th><th class="num">Páginas</th><th></th></tr></thead><tbody id="files-body"></tbody></table>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn small" id="add-pdfs" data-tip="Agregar más PDFs.">+ PDFs</button>
+              <button class="btn small" id="clear-pdfs" data-tip="Quitar todos los PDFs de la lista.">Vaciar</button>
+            </div>
+          </div>
+          <input type="file" id="file-input" accept="application/pdf,.pdf" multiple hidden>
+        </div>
+
+        <div class="card">
+          <h2>2. ¿Cómo se llamará cada archivo?</h2>
+          <select id="preset" class="grow" style="width:100%"></select>
+          <p class="accent" id="example" style="margin:8px 0 0"></p>
+          <div id="custom-box" hidden>
+            <p class="hint" style="margin:10px 0 4px">Plantilla (las palabras entre { } se reemplazan por los datos):</p>
+            <input type="text" id="template" class="mono" style="width:100%">
+            <div class="row" style="margin-top:8px">
+              <span>Agregar un dato:</span>
+              <select id="add-var" data-tip="Inserta el dato donde está el cursor en la plantilla."></select>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <span>Mayúsculas:</span>
+            <select id="case" data-tip="«Tipo Título» escribe Perez Lopez Ana aunque el PDF diga PEREZ LOPEZ ANA."></select>
+          </div>
+          <details style="margin-top:10px">
+            <summary class="muted" style="cursor:pointer">Opciones avanzadas</summary>
+            <div class="row" style="margin-top:8px">
+              <span>Tipo de PDF:</span>
+              <select id="format-select" class="grow" data-tip="Normalmente «Automático»: el programa reconoce cada tarjeta."></select>
+            </div>
+            <label class="check" style="margin-top:8px" data-tip="Si un estudiante ocupa dos páginas seguidas, quedan en un solo archivo.">
+              <input type="checkbox" id="merge"> Unir páginas seguidas del mismo estudiante</label>
+          </details>
+        </div>
+
+        <div class="card">
+          <h2>3. ¿Cómo guardarlos?</h2>
+          <label class="check"><input type="radio" name="save" value="zip" checked> Descargar un archivo .zip</label><br>
+          <label class="check" id="save-folder-opt"><input type="radio" name="save" value="folder"> Guardar en una carpeta de mi computadora</label>
+          <p class="hint" id="save-hint" style="margin:6px 0 0"></p>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2 style="margin:0">Vista previa: así se llamará cada archivo</h2>
+            <span class="hint">Haz clic en un nombre para cambiarlo.</span>
+          </div>
+          <div class="table-wrap" style="max-height:calc(100vh - 330px); min-height:260px; margin-top:10px">
+            <table>
+              <thead><tr><th>Nuevo nombre</th><th>Viene de</th><th class="num">Pág.</th><th>Tipo de PDF</th></tr></thead>
+              <tbody id="preview-body"></tbody>
+            </table>
+            <div class="empty" id="preview-empty">Aquí verás el nombre que tendrá cada archivo.<br>Empieza agregando tus PDFs en el paso 1.</div>
+          </div>
+          <div class="legend" style="margin-top:10px">
+            <span><i style="background:var(--warn)"></i>Falta el nombre del estudiante</span>
+            <span><i style="background:var(--navy)"></i>Nombre corregido a mano</span>
+          </div>
+        </div>
+        <div class="card" id="vars-card" hidden>
+          <h2>Datos leídos de la página seleccionada</h2>
+          <p class="hint" style="margin-top:-6px">Clic en un dato para agregarlo a la plantilla.</p>
+          <div class="table-wrap" style="max-height:260px"><table><tbody id="vars-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="footer">
+    <span class="status" id="split-status"></span>
+    <button class="btn big primary" id="run" disabled data-tip="Crea un PDF por estudiante con el nombre de la vista previa (Ctrl+Enter).">Dividir y renombrar</button>
+  </div>
+</section>
+
+<!-- ======================================================= CLASSROOM -->
+<section class="view" id="view-classroom">
+  <main>
+    <div class="layout-3" style="grid-template-columns: 1fr 2fr">
+      <div class="card">
+        <h2>1. Tu cuenta de Google</h2>
+        <p id="g-account" class="muted" style="margin:0 0 10px"></p>
+        <div class="row">
+          <button class="btn outline" id="g-signin" data-tip="Se abre una ventana de Google para elegir tu cuenta de docente.">Iniciar sesión con Google</button>
+          <button class="btn" id="g-signout" hidden>Cerrar sesión</button>
+        </div>
+        <details style="margin-top:12px" id="g-setup">
+          <summary class="muted" style="cursor:pointer">Configuración (solo la primera vez)</summary>
+          <p class="hint">ID de cliente OAuth (tipo «Aplicación web») del proyecto de Google Cloud:</p>
+          <input type="text" id="g-client" class="mono" style="width:100%" placeholder="123…apps.googleusercontent.com">
+        </details>
+      </div>
+      <div class="card">
+        <h2>2. ¿Dónde y cómo publicar?</h2>
+        <div class="field-grid">
+          <span>Curso:</span>
+          <select id="c-course" data-tip="Solo aparecen tus cursos activos donde eres docente."><option value="">Inicia sesión para ver tus cursos</option></select>
+          <span>Tema:</span>
+          <div class="row"><input type="text" id="c-topic" list="c-topics" placeholder="(sin tema)" class="grow" data-tip="Opcional: escribe un nombre nuevo para crearlo.">
+            <datalist id="c-topics"></datalist><span class="hint">opcional</span></div>
+          <span>Título:</span>
+          <input type="text" id="c-title" class="mono" data-tip="Las palabras entre { } se reemplazan por los datos de cada PDF; {alumno} es el nombre en Classroom.">
+          <span>Descripción:</span>
+          <input type="text" id="c-desc" placeholder="(opcional)">
+        </div>
+        <label class="check" style="margin-top:10px" data-tip="Si lo desmarcas, los alumnos verán el material de inmediato.">
+          <input type="checkbox" id="c-draft" checked> Crear como borrador (recomendado: los revisas y publicas tú en Classroom)</label>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">3. Revisa a quién va cada PDF</h2>
+        <div class="row">
+          <button class="btn small" id="c-add" data-tip="Agrega PDFs ya divididos desde tu computadora.">+ PDFs</button>
+          <button class="btn small" id="c-clear">Vaciar</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:calc(100vh - 470px); min-height:200px; margin-top:10px">
+        <table>
+          <thead><tr><th>PDF</th><th>Alumno en Classroom</th><th>¿Seguro?</th><th>Título en Classroom</th><th>Estado</th></tr></thead>
+          <tbody id="c-body"></tbody>
+        </table>
+        <div class="empty" id="c-empty">Divide tus PDFs (o crea alertas) y aparecerán aquí. También puedes agregar PDFs con «+ PDFs».</div>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><i style="background:var(--ok)"></i>Enviado</span>
+        <span><i style="background:var(--warn)"></i>Revisa el alumno</span>
+        <span><i style="background:var(--error)"></i>Sin alumno o con error (no se envía)</span>
+      </div>
+      <input type="file" id="c-file" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+  </main>
+  <div class="footer">
+    <span class="status" id="c-status"></span>
+    <button class="btn outline" id="c-open" disabled>Abrir curso en Classroom</button>
+    <button class="btn big primary" id="c-send" disabled>Enviar a Classroom</button>
+  </div>
+</section>
+
+<!-- ======================================================= ALERTAS -->
+<section class="view" id="view-alerts">
+  <main>
+    <div class="layout-3">
+      <div class="card">
+        <h2>1. Tarjetas de evaluación</h2>
+        <p class="muted" id="a-src" style="margin:0 0 10px"></p>
+        <div class="row">
+          <button class="btn" id="a-use-main" data-tip="Lee las tarjetas que cargaste en «Dividir y renombrar».">Usar los PDFs cargados</button>
+          <button class="btn" id="a-add" data-tip="Agrega tarjetas desde tu computadora.">+ PDFs</button>
+        </div>
+        <div class="row"><button class="btn" id="a-manual" data-tip="Para disciplina, asistencia u otros casos sin tarjeta.">Nueva alerta sin tarjeta…</button></div>
+        <input type="file" id="a-file" accept="application/pdf,.pdf" multiple hidden>
+      </div>
+      <div class="card">
+        <h2>2. Formularios y datos del docente</h2>
+        <div class="row">
+          <span id="a-tpls" class="hint grow"></span>
+          <button class="btn small outline" id="a-load-tpls" data-tip="Elige los formularios PDF oficiales de alerta académica (se guardan en este navegador).">Cargar formularios…</button>
+        </div>
+        <input type="file" id="a-tpl-file" accept="application/pdf,.pdf" multiple hidden>
+        <div class="row">
+          <span>Modalidad:</span>
+          <label class="check"><input type="radio" name="a-mod" value="0" checked> Presencial</label>
+          <label class="check"><input type="radio" name="a-mod" value="1"> Virtual</label>
+        </div>
+        <div class="row">
+          <span>Adultos:</span>
+          <label class="check"><input type="radio" name="a-age" value="0" checked> Mayores de edad</label>
+          <label class="check"><input type="radio" name="a-age" value="1"> Menores de edad</label>
+        </div>
+        <div class="field-grid" style="margin-top:8px">
+          <span>Docente:</span><input type="text" id="a-doc" data-tip="Tu nombre como aparecerá en la alerta.">
+          <span>Contacto:</span><input type="text" id="a-contact" data-tip="Teléfono o correo para que te contacten.">
+          <span>Atención:</span><input type="text" id="a-hours" placeholder="Lunes a viernes 12:30 - 13:00" data-tip="Cuándo pueden contactarte.">
+          <span>Fecha:</span><input type="text" id="a-date">
+        </div>
+      </div>
+      <div class="card">
+        <h2>3. Reglas</h2>
+        <p class="muted" id="a-rules" style="margin:0 0 10px; white-space:pre-line"></p>
+        <button class="btn outline" id="a-edit-rules" data-tip="Cambia las notas mínimas, las casillas que se marcan y el texto del comentario.">Editar reglas…</button>
+        <label class="check" style="margin-top:10px; display:flex" data-tip="Agrega al comentario lo escrito en «Comments» de la tarjeta.">
+          <input type="checkbox" id="a-obs"> Incluir observaciones de la tarjeta</label>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">4. Revisa las alertas</h2>
+        <span class="hint">Marca o desmarca la casilla para incluir a alguien · clic en una fila para revisarla y editarla</span>
+      </div>
+      <div class="table-wrap" style="max-height:calc(100vh - 520px); min-height:200px; margin-top:10px">
+        <table>
+          <thead><tr><th class="num">✔</th><th>Estudiante</th><th>Curso</th><th class="num">General</th><th class="num">Speaking</th>
+            <th>Mini más baja</th><th class="num">Aus.</th><th>Casillas</th><th>Comentario</th></tr></thead>
+          <tbody id="a-body"></tbody>
+        </table>
+        <div class="empty" id="a-empty">Carga las tarjetas de evaluación (paso 1) para ver aquí quién necesita una alerta.</div>
+      </div>
+      <div class="legend" style="margin-top:10px">
+        <span><i style="background:var(--warn)"></i>Tendrá alerta</span>
+        <span><i style="background:var(--navy)"></i>Editada a mano</span>
+      </div>
+    </div>
+  </main>
+  <div class="footer">
+    <span class="status" id="a-status"></span>
+    <button class="btn big primary" id="a-create" disabled data-tip="Llena un formulario por cada fila marcada.">Crear alertas</button>
+  </div>
+</section>
+
+<!-- ======================================================= FORMATOS -->
+<section class="view" id="view-formats">
+  <main>
+    <div class="fmt-layout">
+      <div class="card">
+        <h2>Formatos</h2>
+        <div class="list-box" id="f-list"></div>
+        <div class="stack" style="margin-top:10px">
+          <button class="btn outline" id="f-new" style="width:100%; justify-content:center">Nuevo</button>
+          <button class="btn" id="f-dup" style="width:100%; justify-content:center">Duplicar</button>
+          <button class="btn" id="f-del" style="width:100%; justify-content:center">Eliminar</button>
+          <button class="btn" id="f-import" style="width:100%; justify-content:center" data-tip="Carga un formato (.json) que te compartieron.">Importar…</button>
+          <button class="btn" id="f-export" style="width:100%; justify-content:center" data-tip="Descarga el formato para compartirlo.">Exportar…</button>
+        </div>
+        <input type="file" id="f-file" accept=".json,application/json" multiple hidden>
+      </div>
+      <div class="card">
+        <div class="callout" style="margin-bottom:12px">Cómo crear un formato: 1) «Nuevo» 2) Abre un PDF de ejemplo
+          3) Haz clic en los textos de la página para crear los campos 4) «Guardar»</div>
+        <div class="field-grid">
+          <span>Nombre:</span><input type="text" id="f-name">
+          <span>Descripción:</span><input type="text" id="f-desc">
+          <span>Se reconoce si la página contiene (uno por línea):</span><textarea id="f-detect" rows="3"></textarea>
+          <span>Campo con el nombre del estudiante:</span><select id="f-student"></select>
+          <span>El nombre viene como:</span><select id="f-order"></select>
+          <span>Plantilla propia (opcional):</span><input type="text" id="f-tpl" class="mono" placeholder="Vacía = la plantilla de «Dividir y renombrar»">
+        </div>
+        <h3 class="section-title" style="margin-top:14px">Campos (datos que se leen de la página)</h3>
+        <div class="table-wrap" style="max-height:260px">
+          <table><thead><tr><th>{campo}</th><th>Cómo</th><th>Dónde / patrón</th><th>Valor en la muestra</th></tr></thead>
+            <tbody id="f-fields"></tbody></table>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn small" id="f-field-add">Agregar…</button>
+          <button class="btn small" id="f-field-edit">Editar…</button>
+          <button class="btn small" id="f-field-del">Quitar</button>
+          <button class="btn small" id="f-field-up">▲</button>
+          <button class="btn small" id="f-field-down">▼</button>
+        </div>
+        <div class="row" style="margin-top:14px; justify-content:space-between">
+          <span class="hint grow" id="f-status"></span>
+          <button class="btn primary" id="f-save">Guardar</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Página de muestra</h2>
+        <div class="row">
+          <button class="btn small" id="f-open">Abrir PDF…</button>
+          <button class="btn small" id="f-prev">◀</button><span id="f-page" class="muted">—</span><button class="btn small" id="f-next">▶</button>
+        </div>
+        <p class="accent" id="f-detected" style="margin:8px 0 2px"></p>
+        <p class="hint" style="margin:0 0 8px">Clic en un texto impreso → crear un campo a partir de él. Arrastrar → marcar una zona.</p>
+        <div class="sample" id="f-sample"><p class="empty" id="f-sample-empty">Abre un PDF de ejemplo de este tipo de documento.</p></div>
+        <input type="file" id="f-sample-file" accept="application/pdf,.pdf" hidden>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ======================================================= AYUDA -->
+<section class="view" id="view-help">
+  <main class="help">
+    <h2>Cómo usar RenameIt</h2>
+    <p class="callout"><b>Privacidad:</b> tus PDFs se procesan dentro de tu navegador; no se suben a ningún servidor.
+      Solo los PDFs que tú envías a Google Classroom se suben a tu propio Google Drive.</p>
+    <h3>1. Dividir y renombrar</h3>
+    <ol>
+      <li>Arrastra los PDFs de las tarjetas a la página (o haz clic en el recuadro para elegirlos).</li>
+      <li>Elige cómo se llamará cada archivo, por ejemplo <i>Apellidos Nombres - Curso - Eval 1</i>. Debajo ves un ejemplo real.
+        Con <b>Personalizado</b> escribes tu propia plantilla: <code>{apellidos} {nombres} - {curso}</code>.</li>
+      <li>Revisa la vista previa: las filas amarillas no tienen el nombre del estudiante. Clic en un nombre para cambiarlo.</li>
+      <li>Pulsa <b>Dividir y renombrar</b>. Se descargan en un .zip, o se guardan directamente en una carpeta (Chrome y Edge).</li>
+    </ol>
+    <h3>2. Enviar a Google Classroom</h3>
+    <ol>
+      <li><b>Iniciar sesión con Google</b> con tu cuenta de docente.</li>
+      <li>Elige el curso y, si quieres, un tema. El título usa los mismos datos; <code>{alumno}</code> es el nombre en Classroom.</li>
+      <li>Revisa la columna <b>Alumno</b> (puedes cambiarlo en la lista) y pulsa <b>Enviar</b>. Cada PDF se publica como
+        <b>material</b> visible solo para su alumno. Deja marcado <b>Crear como borrador</b> para revisarlos antes de publicar.</li>
+    </ol>
+    <h3>3. Alertas académicas</h3>
+    <ol>
+      <li>La primera vez, pulsa <b>Cargar formularios…</b> y elige los PDFs oficiales de alerta académica (se guardan en este navegador).</li>
+      <li>El programa lee de cada tarjeta los Mini-Progress Test, Overall Performance, Speaking, nota general, ausencias y
+        (en Kids) trabajo en clases y conducta, y aplica las <b>reglas</b> para decidir quién necesita alerta.</li>
+      <li>Revisa la tabla, edita lo que haga falta y pulsa <b>Crear alertas</b>. Luego puedes enviarlas a Classroom.</li>
+    </ol>
+    <h3>4. Otros tipos de PDF</h3>
+    <p>En <b>Formatos de PDF</b> enseñas al programa dónde está cada dato en un documento nuevo: abre un ejemplo, haz clic en
+      la etiqueta impresa junto al dato (por ejemplo «Nombre del alumno:») y elige si el dato está a su derecha o debajo.
+      Los formatos se guardan en este navegador; usa <b>Exportar</b> e <b>Importar</b> para compartirlos.</p>
+    <h3>Problemas frecuentes</h3>
+    <ul>
+      <li><b>Filas amarillas / «no reconocido»:</b> el PDF es de otro tipo; crea un formato. Un PDF escaneado (foto) no tiene texto que leer.</li>
+      <li><b>«Acceso bloqueado» al iniciar sesión:</b> usa tu cuenta institucional.</li>
+      <li><b>Se perdió lo que estaba haciendo:</b> los PDFs no se guardan al cerrar la página (por privacidad); los formatos, reglas y preferencias sí.</li>
+    </ul>
+    <p class="hint">RenameIt usa pdf.js (Apache 2.0), pdf-lib (MIT) y JSZip (MIT/GPLv3). Las licencias están en la carpeta <code>vendor</code>.</p>
+  </main>
+</section>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/pdfops.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/google.js"></script>
+<script src="js/app.js"></script>
+<script src="js/classroom.js"></script>
+<script src="js/alerts.js"></script>
+<script src="js/formats.js"></script>
+</body>
+</html>
